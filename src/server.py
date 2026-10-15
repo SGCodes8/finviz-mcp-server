@@ -2274,15 +2274,13 @@ def technical_analysis_screener(
 
 
 def cli_main():
-    """CLI entry point - supports stdio (default) and sse transport for Docker.
-
-    The HTTP/SSE bind defaults to ``127.0.0.1`` (loopback). Override with
-    ``MCP_HOST=0.0.0.0`` only when you need the server reachable from
-    outside the host (e.g. inside a Docker container with host port
-    mapping). See README and Finding #6 in reviews/REVIEW_TRACKING.md.
-    """
+    """CLI entry point - supports stdio (default) and HTTP transports."""
     transport = os.getenv("MCP_TRANSPORT", "stdio")
 
+    if transport in ("sse", "streamable-http"):
+        host = os.getenv("MCP_HOST", "127.0.0.1")
+        port = int(os.getenv("MCP_PORT", "8000"))
+        logger.info(f"Starting MCP server with {transport} transport on {host}:{port}")
         server.settings.host = host
         server.settings.port = port
         allowed = [h.strip() for h in os.getenv("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
