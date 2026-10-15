@@ -2283,22 +2283,17 @@ def cli_main():
     """
     transport = os.getenv("MCP_TRANSPORT", "stdio")
 
-    if transport in ("sse", "streamable-http"):
-        host = os.getenv("MCP_HOST", "127.0.0.1")
-        port = int(os.getenv("MCP_PORT", "8000"))
-        if host == "0.0.0.0":  # noqa: S104 - intentional opt-in pattern
-            logger.warning(
-                "MCP_HOST=0.0.0.0 binds the server to all network "
-                "interfaces. For local-only access, use MCP_HOST=127.0.0.1 "
-                "(the new default). If you are running in Docker and need "
-                "host-side access, keep MCP_HOST=0.0.0.0 inside the "
-                "container and restrict exposure via host port mapping "
-                "(e.g. -p 127.0.0.1:8000:8000). Public exposure also "
-                "requires DNS rebinding protection — see Finding #6 in "
-                "reviews/REVIEW_TRACKING.md."
+        server.settings.host = host
+        server.settings.port = port
+        allowed = [h.strip() for h in os.getenv("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
+        if allowed:
+            from mcp.server.transport_security import TransportSecuritySettings
+            server.settings.transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=allowed + [h + ":*" for h in allowed],
+                allowed_origins=["https://claude.ai", "https://www.claude.ai"],
             )
-        logger.info(f"Starting MCP server with {transport} transport on {host}:{port}")
-        server.run(transport=transport, host=host, port=port)
+        server.run(transport=transport)
     else:
         server.run()
 
